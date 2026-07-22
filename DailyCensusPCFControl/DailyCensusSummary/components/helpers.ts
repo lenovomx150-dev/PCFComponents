@@ -1,6 +1,7 @@
 import { IPersonaProps } from "@fluentui/react/lib/Persona";
-import { MASTER_PEOPLE_LIST } from "../data/mockData";
 import { ValidationState } from "@fluentui/react/lib/Pickers";
+
+const MASTER_PEOPLE_LIST: IPersonaProps[] = [];
 
 export function doesTextStartWith(text: string, filterText: string): boolean {
     return text.toLowerCase().startsWith(filterText.toLowerCase());
@@ -14,7 +15,7 @@ export function listContainsPersona(persona: IPersonaProps, personas: IPersonaPr
     if (!personas?.length) {
         return false;
     }
-    return personas.some(item => item.text === persona.text!);
+    return personas.some(item => item.text === persona.text);
 }
 
 export function getTextFromItem(persona: IPersonaProps): string {
@@ -42,7 +43,7 @@ export function onInputChange(input: string): string {
 export function onFilterChanged(filterText: string, currentPersonas: IPersonaProps[]): IPersonaProps[] {
     if (filterText) {
         let filteredPersonas: IPersonaProps[] = MASTER_PEOPLE_LIST.filter(item =>
-            doesTextStartWith(item.text!, filterText)
+            doesTextStartWith(item.text ?? "", filterText)
         );
         filteredPersonas = removeDuplicates(filteredPersonas, currentPersonas);
         return filteredPersonas;

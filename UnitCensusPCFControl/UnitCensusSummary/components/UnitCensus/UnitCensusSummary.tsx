@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/non-nullable-type-assertion-style */
 import * as React from "react";
 import { Stack, Text, TextField, Icon } from "@fluentui/react";

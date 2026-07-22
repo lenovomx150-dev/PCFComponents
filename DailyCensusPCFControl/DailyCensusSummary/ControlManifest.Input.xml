@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="ucm" constructor="DailyCensusSummary" version="0.0.1" display-name-key="DailyCensusSummary" description-key="DailyCensusSummary description" control-type="virtual" >
+  <control namespace="ucm" constructor="DailyCensusSummary" version="0.0.23" display-name-key="DailyCensusSummary" description-key="DailyCensusSummary description" control-type="virtual" >
     <!--external-service-usage node declares whether this 3rd party PCF control is using external service or not, if yes, this control will be considered as premium and please also add the external domain it is using.
     If it is not using any external service, please set the enabled="false" and DO NOT add any domain below. The "enabled" will be false by default.
     Example1:
@@ -17,8 +17,22 @@
       <domain></domain>
       -->
     </external-service-usage>
-    <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
-    <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type="SingleLine.Text" usage="bound" required="true" />
+    <!--
+      Bind this dataset to the Resident table/view.  The configured view must include
+      the six columns below.  Purpose is intentionally read by its formatted value so
+      option-set labels such as Court, Hospital, Home Pass, AWOL, and Other display
+      exactly as configured in Dataverse.
+    -->
+    <data-set name="residentCensus" display-name-key="Resident_Census_Display_Key">
+      <property-set name="juvenile" display-name-key="Juvenile_Display_Key" description-key="Juvenile_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="facilityrecord" display-name-key="Facility_Record_Display_Key" description-key="Facility_Record_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="unitcensus" display-name-key="Unit_Census_Display_Key" description-key="Unit_Census_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="purpose" display-name-key="Purpose_Display_Key" description-key="Purpose_Desc_Key" of-type="OptionSet" usage="bound" />
+      <property-set name="dailycensus" display-name-key="Daily_Census_Display_Key" description-key="Daily_Census_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="facility" display-name-key="Facility_Display_Key" description-key="Facility_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+    </data-set>
+    <property name="facilityTotal" display-name-key="Facility_Total_Display_Key" description-key="Facility_Total_Desc_Key" of-type="Whole.None" usage="input" required="false" />
+    <property name="assignedTotal" display-name-key="Assigned_Total_Display_Key" description-key="Assigned_Total_Desc_Key" of-type="Whole.None" usage="input" required="false" />
     <!--
       Property node's of-type attribute can be of-type-group attribute.
       Example:
@@ -33,7 +47,7 @@
     <resources>
       <code path="index.ts" order="1"/>
       <platform-library name="React" version="16.14.0" />
-      <platform-library name="Fluent" version="9.68.0" />
+      <platform-library name="Fluent" version="8.0.0" />
       <!-- UNCOMMENT TO ADD MORE RESOURCES
       <css path="css/DailyCensusSummary.css" order="1" />
       <resx path="strings/DailyCensusSummary.1033.resx" version="1.0.0" />

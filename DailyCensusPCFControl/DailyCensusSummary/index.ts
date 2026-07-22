@@ -1,5 +1,4 @@
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import { HelloWorld, IHelloWorldProps } from "./HelloWorld";
 import { DailyCensusSummaryComponent } from "./components";
 import * as React from "react";
 
@@ -34,13 +33,16 @@ export class DailyCensusSummary implements ComponentFramework.ReactControl<IInpu
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const props: IHelloWorldProps = { name: 'Power Apps' };
-        // return React.createElement(
-        //     HelloWorld, props
-        // );
+        const facilityTotal = context.parameters.facilityTotal.raw;
+        const assignedTotal = context.parameters.assignedTotal.raw;
         return React.createElement(
-
-              DailyCensusSummaryComponent
+            DailyCensusSummaryComponent,
+            {
+                dataset: context.parameters.residentCensus,
+                context: context,
+                facilityTotal: facilityTotal ?? undefined,
+                assignedTotal: assignedTotal ?? undefined
+            }
         );
     }
 
