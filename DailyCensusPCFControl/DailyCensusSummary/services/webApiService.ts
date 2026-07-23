@@ -113,29 +113,27 @@ export class WebApiService {
      * Fetch juveniles through active Facility Records for the supplied program.
      * The juvenile itself does not carry a facility/program lookup; that
      * relationship is stored on Facility Record (the ucm_jail table, with
-     * ucm_program + ucm_offendername).
+     * ucm_program + ucm_offendername). The formatted lookup value supplies
+     * the juvenile name directly, so no navigation-property expansion or
+     * separate Juvenile query is required.
      */
     async getAllActiveJuveniles(facilityId: string): Promise<any[]> {
         try {
-            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_offendername_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_OffenderName($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
+            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_offendername_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0`;
             const facilityRecordsResponse = await this.context.webAPI.retrieveMultipleRecords(
                 "ucm_jail",
                 facilityRecordsQuery
             );
 
             return facilityRecordsResponse.entities
-                .map((facilityRecord: any) => {
-                    const juvenile = facilityRecord.ucm_OffenderName;
-                    if (!juvenile?.ucm_offenderid) return null;
-
-                    return {
-                        ucm_offenderid: juvenile.ucm_offenderid,
-                        ucm_fullname: juvenile.ucm_fullname,
-                        ucm_juvenileid: juvenile.ucm_juvenileid,
-                        ucm_facilityrecordid: facilityRecord.ucm_jailid
-                    };
-                })
-                .filter(Boolean);
+                .filter((facilityRecord: any) => facilityRecord._ucm_offendername_value && facilityRecord.ucm_jailid)
+                .map((facilityRecord: any) => ({
+                    // The lookup value is the Juvenile/offender ID, while its
+                    // formatted-value annotation is the displayed Juvenile name.
+                    ucm_offenderid: facilityRecord._ucm_offendername_value,
+                    ucm_fullname: facilityRecord["_ucm_offendername_value@OData.Community.Display.V1.FormattedValue"] || "",
+                    ucm_facilityrecordid: facilityRecord.ucm_jailid
+                }));
         } catch (error) {
             console.error("Error fetching juveniles from Facility Records:", error);
             throw error;
