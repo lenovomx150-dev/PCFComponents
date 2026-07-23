@@ -112,13 +112,14 @@ export class WebApiService {
     /**
      * Fetch juveniles through active Facility Records for the supplied program.
      * The juvenile itself does not carry a facility/program lookup; that
-     * relationship is stored on Facility Record (ucm_program + ucm_juvenile).
+     * relationship is stored on Facility Record (the ucm_jail table, with
+     * ucm_program + ucm_juvenile).
      */
     async getAllActiveJuveniles(facilityId: string): Promise<any[]> {
         try {
-            const facilityRecordsQuery = `?$select=ucm_facilityrecordid,_ucm_juvenile_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_Juvenile($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
+            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_juvenile_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_Juvenile($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
             const facilityRecordsResponse = await this.context.webAPI.retrieveMultipleRecords(
-                "ucm_facilityrecord",
+                "ucm_jail",
                 facilityRecordsQuery
             );
 
@@ -131,7 +132,7 @@ export class WebApiService {
                         ucm_offenderid: juvenile.ucm_offenderid,
                         ucm_fullname: juvenile.ucm_fullname,
                         ucm_juvenileid: juvenile.ucm_juvenileid,
-                        ucm_facilityrecordid: facilityRecord.ucm_facilityrecordid
+                        ucm_facilityrecordid: facilityRecord.ucm_jailid
                     };
                 })
                 .filter(Boolean);
@@ -201,7 +202,7 @@ export class WebApiService {
             }
 
             if (facilityRecordId) {
-                (entity as any)["ucm_FacilityRecord@odata.bind"] = `/ucm_facilityrecords(${facilityRecordId})`;
+                (entity as any)["ucm_FacilityRecord@odata.bind"] = `/ucm_jails(${facilityRecordId})`;
             }
 
             const response = await this.context.webAPI.createRecord("ucm_unitcensusresident", entity);
