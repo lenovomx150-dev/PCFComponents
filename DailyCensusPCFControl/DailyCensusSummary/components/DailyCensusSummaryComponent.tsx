@@ -21,6 +21,12 @@ interface IJuvenileSearchResult {
     ucm_facilityrecordid?: string;
 }
 
+interface IPurposeDefinition {
+    status: string;
+    popLabel: string;
+    value: number;
+}
+
 // Fluent's IPersonaProps does not declare an arbitrary data property, but the
 // picker needs it to retain the Dataverse row when a resident changes purpose.
 type ICensusPersona = IPersonaProps & {
@@ -28,36 +34,12 @@ type ICensusPersona = IPersonaProps & {
     onClick?: React.MouseEventHandler<HTMLElement>;
 };
 
-const STATUS_DEFINITIONS = [
-    { status: "Other", popLabel: "Other" },
-    { status: "AWOL", popLabel: "AWOL" },
-    { status: "Home Pass", popLabel: "Home Visit" },
-    { status: "Court", popLabel: "Court" },
-    { status: "Intake", popLabel: "Intake" },
-    { status: "Discharged", popLabel: "Discharged" },
-    { status: "Non-Billable", popLabel: "Non Billable Status" },
-    { status: "Hospital", popLabel: "Hospital" }
-];
-
-const normalisePurpose = (value: string): string => {
+const normalisePurpose = (value: string, purposes: IPurposeDefinition[]): string => {
     const purpose = value.trim().toLowerCase();
-    const optionSetPurpose: Record<string, string> = {
-        "1": "Other",
-        "2": "AWOL",
-        "3": "Home Pass",
-        "4": "Court",
-        "5": "Intake",
-        "6": "Discharged",
-        "7": "Non-Billable",
-        "8": "Hospital"
-    };
-    if (optionSetPurpose[purpose]) return optionSetPurpose[purpose];
-    if (!purpose || purpose === "other") return "Other";
-    if (purpose === "home visit" || purpose === "home pass") return "Home Pass";
-    if (purpose === "non billable" || purpose === "non-billable") return "Non-Billable";
-    return STATUS_DEFINITIONS.some(item => item.status.toLowerCase() === purpose)
-        ? STATUS_DEFINITIONS.find(item => item.status.toLowerCase() === purpose)!.status
-        : "Other";
+    const matchingPurpose = purposes.find(item =>
+        item.status.toLowerCase() === purpose || item.value.toString() === purpose
+    );
+    return matchingPurpose?.status || "";
 };
 
 const toPersona = (
@@ -78,6 +60,7 @@ const toPersona = (
 
 export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = ({ dataset, context, facilityTotal, assignedTotal }) => {
     const [data, setData] = React.useState<ICensusStatusRow[]>([]);
+    const [purposeDefinitions, setPurposeDefinitions] = React.useState<IPurposeDefinition[]>([]);
     const [allActiveJuveniles, setAllActiveJuveniles] = React.useState<any[]>([]);
     const [availableJuveniles, setAvailableJuveniles] = React.useState<any[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -114,6 +97,23 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                 if (!webApiService.current || !context) {
                     throw new Error("Web API service not initialized");
                 }
+
+                const purposeMetadata = await context.utils.getEntityMetadata(
+                    "ucm_unitcensusresident",
+                    ["ucm_purpose"]
+                );
+                const purposeOptions = purposeMetadata.metadata?.ucm_purpose?.OptionSet?.Options || [];
+                const dynamicPurposes = purposeOptions
+                    .filter((option: ComponentFramework.PropertyHelper.OptionMetadata) => option.Label && option.Value !== undefined)
+                    .map((option: ComponentFramework.PropertyHelper.OptionMetadata) => ({
+                        status: option.Label,
+                        popLabel: option.Label,
+                        value: option.Value
+                    }));
+                if (!dynamicPurposes.length) {
+                    throw new Error("No choices were found for Unit Census Resident Purpose.");
+                }
+                setPurposeDefinitions(dynamicPurposes);
 
                 // PCF controls do not receive formContext. page.entityId identifies the
                 // Daily Census record on which this control is rendered.
@@ -166,13 +166,13 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
 
     // Create status rows from residents
     const createStatusRows = React.useCallback((): ICensusStatusRow[] => {
-        return STATUS_DEFINITIONS.map(definition => ({
+        return purposeDefinitions.map(definition => ({
             ...definition,
             residents: residents
-                .filter(resident => normalisePurpose(resident.purpose) === definition.status)
+                .filter(resident => normalisePurpose(resident.purpose, purposeDefinitions) === definition.status)
                 .map(resident => toPersona(resident, () => openJuvenile(resident)))
         }));
-    }, [openJuvenile, residents]);
+    }, [openJuvenile, purposeDefinitions, residents]);
 
     // Update status rows when residents change
     React.useEffect(() => {
@@ -210,7 +210,8 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
         });
     };
 
-    const handlePickerChange = async (status: string, updatedPeople?: IPersonaProps[]): Promise<void> => {
+    const handlePickerChange = async (purpose: IPurposeDefinition, updatedPeople?: IPersonaProps[]): Promise<void> => {
+        const status = purpose.status;
         const updated = updatedPeople ?? [];
         const updatedKeys = new Set(updated.map(person => person.key));
 
@@ -240,13 +241,13 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
 
                     try {
                         if (juvenileData.recordId) {
-                            await webApiService.current.updateUnitCensusResident(juvenileData.recordId, status);
+                            await webApiService.current.updateUnitCensusResident(juvenileData.recordId, purpose.value);
                         } else {
                             await webApiService.current.createUnitCensusResident(
                                 juvenileData.ucm_offenderid,
                                 dailyCensusId,
                                 facilityId,
-                                status,
+                                purpose.value,
                                 dailyCensusDate,
                                 undefined,
                                 juvenileData.ucm_facilityrecordid
@@ -330,7 +331,10 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
             <div className={styles.sectionCardWithMargin}>
                 <Text className={styles.sectionHeader}>3. Resident Status</Text>
                 <Stack tokens={{ childrenGap: 12 }}>
-                    {data.map(item => <div key={item.status} className={styles.residentRow}>
+                    {data.map(item => {
+                        const purpose = purposeDefinitions.find(definition => definition.status === item.status);
+                        if (!purpose) return null;
+                        return <div key={item.status} className={styles.residentRow}>
                         <div className={styles.residentLabel}><Text style={{ fontWeight: 500 }}>{item.status}</Text></div>
                         <TextField readOnly value={item.residents.length.toString()} className={styles.residentCountField} />
                         <div className={styles.pickerWrapper}>
@@ -338,13 +342,13 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                                 onResolveSuggestions={resolveSuggestions}
                                 getTextFromItem={(persona) => persona.text ?? ""}
                                 selectedItems={item.residents}
-                                onChange={(people) => handlePickerChange(item.status, people)}
+                                onChange={(people) => handlePickerChange(purpose, people)}
                                 styles={customPickerStyles}
                                 inputProps={{ "aria-label": `Search and add residents with ${item.status} status` }}
                             />
                             <div className={styles.rightActionIcons}><Icon iconName="ChevronDown" className={styles.actionIconItem} style={{ fontSize: 12 }} /><Icon iconName="Search" className={styles.actionIconItem} style={{ fontSize: 13 }} /></div>
                         </div>
-                    </div>)}
+                    </div>})}
                 </Stack>
             </div>
         </div>

@@ -10,17 +10,6 @@ export interface IWebApiConfig {
  */
 export class WebApiService {
     private webApiVersion = "v9.0";
-    private readonly purposeValues: Record<string, number> = {
-        "Other": 1,
-        "AWOL": 2,
-        "Home Pass": 3,
-        "Court": 4,
-        "Intake": 5,
-        "Discharged": 6,
-        "Non-Billable": 7,
-        "Hospital": 8
-    };
-
     constructor(private context: ComponentFramework.Context<any>) {}
 
     private async tryRetrieveMultipleRecords(entityNames: string[], query: string): Promise<any> {
@@ -54,14 +43,6 @@ export class WebApiService {
         // Dataverse Web API uses OData v4. The OData v2 datetime'…' syntax is
         // rejected as a string literal; use an unquoted ISO 8601 timestamp.
         return `${dateOnlyValue}T00:00:00Z`;
-    }
-
-    private getPurposeValue(purpose: string): number {
-        const value = this.purposeValues[purpose];
-        if (value === undefined) {
-            throw new Error(`Unknown Unit Census Resident purpose: ${purpose}`);
-        }
-        return value;
     }
 
     /** Fetch the Daily Census record currently hosting the control. */
@@ -179,7 +160,7 @@ export class WebApiService {
         juvenileId: string,
         dailyCensusId: string,
         facilityId: string,
-        purpose: string,
+        purposeValue: number,
         censusDate: string,
         unitCensusId?: string,
         facilityRecordId?: string
@@ -191,7 +172,7 @@ export class WebApiService {
                 "ucm_Juvenile@odata.bind": `/ucm_offenders(${juvenileId})`,
                 "ucm_DailyCensus@odata.bind": `/ucm_dailycensuses(${dailyCensusId})`,
                 "ucm_Facility@odata.bind": `/ucm_admissionprograms(${facilityId})`,
-                ucm_purpose: this.getPurposeValue(purpose),
+                ucm_purpose: purposeValue,
                 ucm_date: censusDate.includes("T") ? censusDate : `${censusDate}T00:00:00Z`
             };
 
@@ -216,11 +197,11 @@ export class WebApiService {
      */
     async updateUnitCensusResident(
         recordId: string,
-        purpose: string
+        purposeValue: number
     ): Promise<void> {
         try {
             const entity = {
-                ucm_purpose: this.getPurposeValue(purpose)
+                ucm_purpose: purposeValue
             };
 
             await this.context.webAPI.updateRecord("ucm_unitcensusresident", recordId, entity);
