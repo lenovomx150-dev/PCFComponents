@@ -113,11 +113,11 @@ export class WebApiService {
      * Fetch juveniles through active Facility Records for the supplied program.
      * The juvenile itself does not carry a facility/program lookup; that
      * relationship is stored on Facility Record (the ucm_jail table, with
-     * ucm_program + ucm_juvenile).
+     * ucm_program + ucm_offendername).
      */
     async getAllActiveJuveniles(facilityId: string): Promise<any[]> {
         try {
-            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_juvenile_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_Juvenile($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
+            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_offendername_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_OffenderName($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
             const facilityRecordsResponse = await this.context.webAPI.retrieveMultipleRecords(
                 "ucm_jail",
                 facilityRecordsQuery
@@ -125,7 +125,7 @@ export class WebApiService {
 
             return facilityRecordsResponse.entities
                 .map((facilityRecord: any) => {
-                    const juvenile = facilityRecord.ucm_Juvenile;
+                    const juvenile = facilityRecord.ucm_OffenderName;
                     if (!juvenile?.ucm_offenderid) return null;
 
                     return {
