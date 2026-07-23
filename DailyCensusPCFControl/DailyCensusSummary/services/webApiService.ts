@@ -110,21 +110,33 @@ export class WebApiService {
     }
 
     /**
-     * Fetch all ACTIVE juveniles for a facility (for search dropdown)
-     * Shows all active juveniles regardless of assignment status
+     * Fetch juveniles through active Facility Records for the supplied program.
+     * The juvenile itself does not carry a facility/program lookup; that
+     * relationship is stored on Facility Record (ucm_program + ucm_juvenile).
      */
     async getAllActiveJuveniles(facilityId: string): Promise<any[]> {
         try {
-            // Get all ACTIVE offenders/juveniles in the facility (statecode = 0 is active)
-            const juvenilesQuery = `?$filter=_ucm_facility_value eq '${facilityId}' and statecode eq 0&$select=ucm_offenderid,ucm_fullname,ucm_juvenileid`;
-            const juvenilesResponse = await this.context.webAPI.retrieveMultipleRecords(
-                "ucm_offender",
-                juvenilesQuery
+            const facilityRecordsQuery = `?$select=ucm_facilityrecordid,_ucm_juvenile_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0&$expand=ucm_Juvenile($select=ucm_offenderid,ucm_fullname,ucm_juvenileid)`;
+            const facilityRecordsResponse = await this.context.webAPI.retrieveMultipleRecords(
+                "ucm_facilityrecord",
+                facilityRecordsQuery
             );
 
-            return juvenilesResponse.entities;
+            return facilityRecordsResponse.entities
+                .map((facilityRecord: any) => {
+                    const juvenile = facilityRecord.ucm_Juvenile;
+                    if (!juvenile?.ucm_offenderid) return null;
+
+                    return {
+                        ucm_offenderid: juvenile.ucm_offenderid,
+                        ucm_fullname: juvenile.ucm_fullname,
+                        ucm_juvenileid: juvenile.ucm_juvenileid,
+                        ucm_facilityrecordid: facilityRecord.ucm_facilityrecordid
+                    };
+                })
+                .filter(Boolean);
         } catch (error) {
-            console.error("Error fetching all active juveniles:", error);
+            console.error("Error fetching juveniles from Facility Records:", error);
             throw error;
         }
     }
@@ -135,12 +147,7 @@ export class WebApiService {
      */
     async getAvailableJuveniles(facilityId: string, censusDate: string, dailyCensusId?: string): Promise<any[]> {
         try {
-            // Get all ACTIVE offenders/juveniles in the facility
-            const juvenilesQuery = `?$filter=_ucm_facility_value eq '${facilityId}' and statecode eq 0&$select=ucm_offenderid,ucm_fullname,ucm_juvenileid`;
-            const juvenilesResponse = await this.context.webAPI.retrieveMultipleRecords(
-                "ucm_offender",
-                juvenilesQuery
-            );
+            const juveniles = await this.getAllActiveJuveniles(facilityId);
 
             // Get all residents already assigned to this date and facility (regardless of purpose)
             // Filter by both date (ucm_date) and facility to be specific to this daily census
@@ -157,7 +164,7 @@ export class WebApiService {
             );
 
             // Filter out juveniles that are already assigned
-            return juvenilesResponse.entities.filter(
+            return juveniles.filter(
                 (juvenile: any) => !assignedJuvenileIds.has(juvenile.ucm_offenderid)
             );
         } catch (error) {
@@ -175,7 +182,8 @@ export class WebApiService {
         facilityId: string,
         purpose: string,
         censusDate: string,
-        unitCensusId?: string
+        unitCensusId?: string,
+        facilityRecordId?: string
     ): Promise<any> {
         try {
             const entity = {
@@ -190,6 +198,10 @@ export class WebApiService {
 
             if (unitCensusId) {
                 (entity as any)["ucm_UnitCensus@odata.bind"] = `/ucm_unitcensuses(${unitCensusId})`;
+            }
+
+            if (facilityRecordId) {
+                (entity as any)["ucm_FacilityRecord@odata.bind"] = `/ucm_facilityrecords(${facilityRecordId})`;
             }
 
             const response = await this.context.webAPI.createRecord("ucm_unitcensusresident", entity);

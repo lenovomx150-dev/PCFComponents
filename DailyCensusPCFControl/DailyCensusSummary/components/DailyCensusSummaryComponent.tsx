@@ -18,6 +18,7 @@ interface IJuvenileSearchResult {
     ucm_offenderid: string;
     ucm_fullname?: string;
     ucm_juvenileid?: string;
+    ucm_facilityrecordid?: string;
 }
 
 // Fluent's IPersonaProps does not declare an arbitrary data property, but the
@@ -246,7 +247,9 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                                 dailyCensusId,
                                 facilityId,
                                 status,
-                                dailyCensusDate
+                                dailyCensusDate,
+                                undefined,
+                                juvenileData.ucm_facilityrecordid
                             );
                         }
                     } catch (err) {
