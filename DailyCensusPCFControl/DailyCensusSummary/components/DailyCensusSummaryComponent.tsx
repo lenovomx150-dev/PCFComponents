@@ -98,14 +98,10 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                     throw new Error("Web API service not initialized");
                 }
 
-                const purposeMetadata = await context.utils.getEntityMetadata(
-                    "ucm_unitcensusresident",
-                    ["ucm_purpose"]
-                );
-                const purposeOptions = purposeMetadata.metadata?.ucm_purpose?.OptionSet?.Options || [];
+                const purposeOptions = await webApiService.current.getGlobalChoiceOptions("ucm_purpose");
                 const dynamicPurposes = purposeOptions
-                    .filter((option: ComponentFramework.PropertyHelper.OptionMetadata) => option.Label && option.Value !== undefined)
-                    .map((option: ComponentFramework.PropertyHelper.OptionMetadata) => ({
+                    .filter((option) => option.Label && option.Value !== undefined)
+                    .map((option) => ({
                         status: option.Label,
                         popLabel: option.Label,
                         value: option.Value
@@ -292,11 +288,7 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
             }
         }
     };
-    const leftColumn = data.slice(0, 5);
-    const rightColumnData = data.slice(5);
-    const groupedTotal = data.reduce((total, item) => total + item.residents.length, 0);
-
-    const countField = (value: number) => <TextField readOnly value={value.toString()} className={styles.countFieldReadOnly} />;
+    const totalCount = data.reduce((sum, item) => sum + item.residents.length, 0);
 
     if (isLoading) {
         return <div className={styles.root}><Spinner size={SpinnerSize.large} label="Loading census data..." /></div>;
@@ -308,28 +300,8 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
 
     return (
         <div className={styles.root}>
-            <div className={styles.topSectionContainer}>
-                <div className={styles.sectionCard}>
-                    <Text className={styles.sectionHeader}>1. Population Data <span className={styles.subHeaderLabel}>- Read Only</span></Text>
-                    <div className={styles.topLayoutGrid}>
-                        <Stack tokens={stackTokens}>{leftColumn.map(item => <div key={item.status} className={styles.populationRow}><Text className={styles.label}>{item.popLabel}</Text>{countField(item.residents.length)}</div>)}</Stack>
-                        <Stack tokens={stackTokens}>
-                            {rightColumnData.map(item => <div key={item.status} className={styles.populationRow}><Text className={styles.label}>{item.popLabel}</Text>{countField(item.residents.length)}</div>)}
-                            <div className={styles.populationRow}><Text className={styles.label}>Other Total</Text>{countField(groupedTotal)}</div>
-                            <div className={styles.populationRow}><Text className={styles.label}>Actual Total</Text>{countField(residents.length)}</div>
-                        </Stack>
-                    </div>
-                </div>
-                <div className={styles.sectionCard}>
-                    <Text className={styles.sectionHeader}>2. Present</Text>
-                    <div className={styles.presentRowContainer}>
-                        <div className={styles.populationRow}><Text className={styles.label}>Facility Total</Text>{countField(facilityTotal ?? residents.length)}</div>
-                        <div className={styles.populationRow}><Text className={styles.label}>Assigned Total</Text>{countField(assignedTotal ?? residents.length)}</div>
-                    </div>
-                </div>
-            </div>
             <div className={styles.sectionCardWithMargin}>
-                <Text className={styles.sectionHeader}>3. Resident Status</Text>
+                <Text className={styles.sectionHeader}>Resident Status</Text>
                 <Stack tokens={{ childrenGap: 12 }}>
                     {data.map(item => {
                         const purpose = purposeDefinitions.find(definition => definition.status === item.status);
@@ -349,6 +321,12 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                             <div className={styles.rightActionIcons}><Icon iconName="ChevronDown" className={styles.actionIconItem} style={{ fontSize: 12 }} /><Icon iconName="Search" className={styles.actionIconItem} style={{ fontSize: 13 }} /></div>
                         </div>
                     </div>})}
+                    {/* Total row */}
+                    <div className={styles.residentRow}>
+                        <div className={styles.residentLabel}><Text style={{ fontWeight: 600, fontSize: "14px", color: "#323130" }}>Total</Text></div>
+                        <TextField readOnly value={totalCount.toString()} className={styles.residentCountField} />
+                        <div className={styles.pickerWrapper} />
+                    </div>
                 </Stack>
             </div>
         </div>

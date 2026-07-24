@@ -91,6 +91,44 @@ export class WebApiService {
     }
 
     /**
+     * Fetch global choice options by schema name using the Web API.
+     * Works reliably for both global and local option sets.
+     */
+    async getGlobalChoiceOptions(globalChoiceSchemaName: string): Promise<{ Label: string; Value: number }[]> {
+        try {
+            const clientUrl = (this.context as any).page?.getClientUrl?.()
+                ?? window.location.origin;
+
+            const url = `${clientUrl}/api/data/${this.webApiVersion}/GlobalOptionSetDefinitions(Name='${globalChoiceSchemaName}')`;
+
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                    "OData-MaxVersion": "4.0",
+                    "OData-Version": "4.0"
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Dataverse error fetching global choice ${globalChoiceSchemaName}:`, errorText);
+                throw new Error(errorText);
+            }
+
+            const result = await response.json();
+            const options = (result.Options ?? []).map((o: any) => ({
+                Value: o.Value,
+                Label: o.Label?.UserLocalizedLabel?.Label ?? o.Label?.LocalizedLabels?.[0]?.Label ?? ""
+            }));
+            return options;
+        } catch (error) {
+            console.error(`Error fetching global choice options for ${globalChoiceSchemaName}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Fetch juveniles through active Facility Records for the supplied program.
      * The juvenile itself does not carry a facility/program lookup; that
      * relationship is stored on Facility Record (the ucm_jail table, with
