@@ -60,6 +60,27 @@ export class WebApiService {
     }
 
     /**
+     * Fetch Unit Census records related to a Daily Census
+     */
+    async getUnitCensusByDailyCensus(dailyCensusId: string): Promise<any[]> {
+        try {
+            const query = `?$select=ucm_unitcensusid,_ucm_livingarea_value&$filter=_ucm_dailycensus_value eq '${dailyCensusId}' and statecode eq 0`;
+            const response = await this.context.webAPI.retrieveMultipleRecords(
+                "ucm_unitcensus",
+                query
+            );
+
+            return response.entities.map((entity: any) => ({
+                id: entity.ucm_unitcensusid,
+                livingArea: entity._ucm_livingarea_value || ""
+            }));
+        } catch (error) {
+            console.error("Error fetching Unit Census by Daily Census:", error);
+            throw error;
+        }
+    }
+
+    /**
      * Fetch all Unit Census Residents for a daily census by date and facility
      * Uses ucm_date field to match the daily census date
      */
@@ -138,7 +159,7 @@ export class WebApiService {
      */
     async getAllActiveJuveniles(facilityId: string): Promise<any[]> {
         try {
-            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_offendername_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0`;
+            const facilityRecordsQuery = `?$select=ucm_jailid,_ucm_offendername_value,_ucm_currentlivingarealookup_value&$filter=_ucm_program_value eq '${facilityId}' and statecode eq 0`;
             const facilityRecordsResponse = await this.context.webAPI.retrieveMultipleRecords(
                 "ucm_jail",
                 facilityRecordsQuery
@@ -151,7 +172,8 @@ export class WebApiService {
                     // formatted-value annotation is the displayed Juvenile name.
                     ucm_offenderid: facilityRecord._ucm_offendername_value,
                     ucm_fullname: facilityRecord["_ucm_offendername_value@OData.Community.Display.V1.FormattedValue"] || "",
-                    ucm_facilityrecordid: facilityRecord.ucm_jailid
+                    ucm_facilityrecordid: facilityRecord.ucm_jailid,
+                    ucm_livingarea: facilityRecord._ucm_currentlivingarealookup_value || ""
                 }));
         } catch (error) {
             console.error("Error fetching juveniles from Facility Records:", error);
@@ -200,11 +222,13 @@ export class WebApiService {
         facilityId: string,
         purposeValue: number,
         censusDate: string,
+        facilityRecordId?: string,
         unitCensusId?: string,
-        facilityRecordId?: string
+        livingAreaId?: string,
+        name?: string
     ): Promise<any> {
         try {
-            const entity = {
+            const entity: any = {
                 // The lookup attribute names are lower-case, but Dataverse expects
                 // the schema-cased navigation-property names for @odata.bind.
                 "ucm_Juvenile@odata.bind": `/ucm_offenders(${juvenileId})`,
@@ -214,12 +238,20 @@ export class WebApiService {
                 ucm_date: censusDate.includes("T") ? censusDate : `${censusDate}T00:00:00Z`
             };
 
-            if (unitCensusId) {
-                (entity as any)["ucm_UnitCensus@odata.bind"] = `/ucm_unitcensuses(${unitCensusId})`;
+            if (name) {
+                entity.ucm_name = name;
             }
 
             if (facilityRecordId) {
-                (entity as any)["ucm_FacilityRecord@odata.bind"] = `/ucm_jails(${facilityRecordId})`;
+                entity["ucm_FacilityRecord@odata.bind"] = `/ucm_jails(${facilityRecordId})`;
+            }
+
+            if (unitCensusId) {
+                entity["ucm_UnitCensus@odata.bind"] = `/ucm_unitcensuses(${unitCensusId})`;
+            }
+
+            if (livingAreaId) {
+                entity["ucm_LivingArea@odata.bind"] = `/ucm_programs(${livingAreaId})`;
             }
 
             const response = await this.context.webAPI.createRecord("ucm_unitcensusresident", entity);

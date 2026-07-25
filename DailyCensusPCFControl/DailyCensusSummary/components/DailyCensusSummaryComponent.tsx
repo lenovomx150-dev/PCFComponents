@@ -70,6 +70,7 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
     const [dailyCensusDate, setDailyCensusDate] = React.useState<string>("");
     const [dailyCensusId, setDailyCensusId] = React.useState<string>("");
     const [facilityId, setFacilityId] = React.useState<string>("");
+    const [unitCensusRecords, setUnitCensusRecords] = React.useState<any[]>([]);
 
     const openJuvenile = React.useCallback((resident: IResidentCensusRow) => {
         if (resident.juvenileId) {
@@ -136,7 +137,11 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                     throw new Error("Daily Census date is missing");
                 }
                 setDailyCensusDate(censusDate);
-                
+
+                // Fetch Unit Census records related to this Daily Census
+                const unitCensusData = await webApiService.current.getUnitCensusByDailyCensus(currentDailyCensusId);
+                setUnitCensusRecords(unitCensusData);
+
                 // Fetch Unit Census Residents for this date and facility
                 const loadedResidents = await webApiService.current.getUnitCensusResidents(currentDailyCensusId, censusDate, facilityIdValue);
                 setResidents(loadedResidents);
@@ -239,14 +244,25 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                         if (juvenileData.recordId) {
                             await webApiService.current.updateUnitCensusResident(juvenileData.recordId, purpose.value);
                         } else {
+                            // Find matching unit census by living area
+                            const livingArea = juvenileData.ucm_livingarea || "";
+                            const matchingUnitCensus = unitCensusRecords.find(uc => uc.livingArea === livingArea);
+
+                            // Format name as facilityRecordGuid - MM/DD/YYYY
+                            const dateParts = dailyCensusDate.split("-");
+                            const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+                            const residentName = `${juvenileData.ucm_facilityrecordid} - ${formattedDate}`;
+
                             await webApiService.current.createUnitCensusResident(
                                 juvenileData.ucm_offenderid,
                                 dailyCensusId,
                                 facilityId,
                                 purpose.value,
                                 dailyCensusDate,
-                                undefined,
-                                juvenileData.ucm_facilityrecordid
+                                juvenileData.ucm_facilityrecordid,
+                                matchingUnitCensus?.id,
+                                livingArea,
+                                residentName
                             );
                         }
                     } catch (err) {
@@ -312,6 +328,7 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                         <div className={styles.pickerWrapper}>
                             <NormalPeoplePicker
                                 onResolveSuggestions={resolveSuggestions}
+                                onEmptyResolveSuggestions={(selectedItems) => resolveSuggestions("", selectedItems)}
                                 getTextFromItem={(persona) => persona.text ?? ""}
                                 selectedItems={item.residents}
                                 onChange={(people) => handlePickerChange(purpose, people)}
