@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest>
-  <control namespace="ucm" constructor="UnitCensusSummary" version="0.0.1" display-name-key="UnitCensusSummary" description-key="UnitCensusSummary description" control-type="virtual" >
+  <control namespace="ucm" constructor="UnitCensusSummary" version="0.0.3" display-name-key="UnitCensusSummary" description-key="UnitCensusSummary description" control-type="virtual" >
     <!--external-service-usage node declares whether this 3rd party PCF control is using external service or not, if yes, this control will be considered as premium and please also add the external domain it is using.
     If it is not using any external service, please set the enabled="false" and DO NOT add any domain below. The "enabled" will be false by default.
     Example1:
@@ -17,19 +17,14 @@
       <domain></domain>
       -->
     </external-service-usage>
-    <!-- property node identifies a specific, configurable piece of data that the control expects from CDS -->
-    <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type="SingleLine.Text" usage="bound" required="true" />
-    <!--
-      Property node's of-type attribute can be of-type-group attribute.
-      Example:
-      <type-group name="numbers">
-        <type>Whole.None</type>
-        <type>Currency</type>
-        <type>FP</type>
-        <type>Decimal</type>
-      </type-group>
-      <property name="sampleProperty" display-name-key="Property_Display_Key" description-key="Property_Desc_Key" of-type-group="numbers" usage="bound" required="true" />
-    -->
+    <!-- Bind this dataset to a Unit Census Resident view. Include these fields in the view. -->
+    <data-set name="residentCensus" display-name-key="Resident_Census_Display_Key">
+      <property-set name="juvenile" display-name-key="Juvenile_Display_Key" description-key="Juvenile_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="unitcensus" display-name-key="Unit_Census_Display_Key" description-key="Unit_Census_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="purpose" display-name-key="Purpose_Display_Key" description-key="Purpose_Desc_Key" of-type="OptionSet" usage="bound" />
+      <property-set name="temporaryabsenceenddate" display-name-key="Temporary_Absence_End_Date_Display_Key" description-key="Temporary_Absence_End_Date_Desc_Key" of-type="DateAndTime.DateOnly" usage="bound" />
+      <property-set name="date" display-name-key="Census_Date_Display_Key" description-key="Census_Date_Desc_Key" of-type="DateAndTime.DateOnly" usage="bound" />
+    </data-set>
     <resources>
       <code path="index.ts" order="1"/>
       <platform-library name="React" version="16.14.0" />
@@ -39,17 +34,5 @@
       <resx path="strings/UnitCensusSummary.1033.resx" version="1.0.0" />
       -->
     </resources>
-    <!-- UNCOMMENT TO ENABLE THE SPECIFIED API
-    <feature-usage>
-      <uses-feature name="Device.captureAudio" required="true" />
-      <uses-feature name="Device.captureImage" required="true" />
-      <uses-feature name="Device.captureVideo" required="true" />
-      <uses-feature name="Device.getBarcodeValue" required="true" />
-      <uses-feature name="Device.getCurrentPosition" required="true" />
-      <uses-feature name="Device.pickFile" required="true" />
-      <uses-feature name="Utility" required="true" />
-      <uses-feature name="WebAPI" required="true" />
-    </feature-usage>
-    -->
   </control>
 </manifest>

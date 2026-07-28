@@ -1,8 +1,11 @@
 import { IPersonaProps } from "@fluentui/react/lib/Persona";
 
-export interface IUnitRecord {
+export interface IUnitCensusResident {
     id: string;
-    juvenileName: string;
+    juvenileId?: string;
+    juvenile: string;
+    purpose: string;
+    temporaryAbsenceEndDate?: string;
 }
 
 export interface ICensusRow {

@@ -1,6 +1,5 @@
 import { UnitCensusSummaryComponent } from "./components/UnitCensus/UnitCensusSummary";
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
-import { HelloWorld, IHelloWorldProps } from "./HelloWorld";
 import * as React from "react";
 
 export class UnitCensusSummary implements ComponentFramework.ReactControl<IInputs, IOutputs> {
@@ -34,9 +33,12 @@ export class UnitCensusSummary implements ComponentFramework.ReactControl<IInput
      * @returns ReactElement root react element for the control
      */
     public updateView(context: ComponentFramework.Context<IInputs>): React.ReactElement {
-        const props: IHelloWorldProps = { name: 'Power Apps' };
         return React.createElement(
-            UnitCensusSummaryComponent
+            UnitCensusSummaryComponent,
+            {
+                context: context,
+                dataset: context.parameters.residentCensus
+            }
         );
     }
 
