@@ -25,6 +25,8 @@ export interface IResidentCensusRow {
     recordId?: string;
     juvenileId?: string;
     date?: string;  // ucm_date field (ISO format: 2026-07-21T00:00:00Z)
+    temporaryAbsenceStartDate?: string;
+    temporaryAbsenceEndDate?: string;
 }
 
 export interface IAvailableJuvenile {

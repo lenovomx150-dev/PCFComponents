@@ -30,6 +30,9 @@
       <property-set name="purpose" display-name-key="Purpose_Display_Key" description-key="Purpose_Desc_Key" of-type="OptionSet" usage="bound" />
       <property-set name="dailycensus" display-name-key="Daily_Census_Display_Key" description-key="Daily_Census_Desc_Key" of-type="Lookup.Simple" usage="bound" />
       <property-set name="facility" display-name-key="Facility_Display_Key" description-key="Facility_Desc_Key" of-type="Lookup.Simple" usage="bound" />
+      <property-set name="censusdate" display-name-key="Census_Date_Display_Key" description-key="Census_Date_Desc_Key" of-type="DateAndTime.DateOnly" usage="bound" />
+      <property-set name="temporaryabsencestartdate" display-name-key="Temporary_Absence_Start_Date_Display_Key" description-key="Temporary_Absence_Start_Date_Desc_Key" of-type="DateAndTime.DateAndTime" usage="bound" />
+      <property-set name="temporaryabsenceenddate" display-name-key="Temporary_Absence_End_Date_Display_Key" description-key="Temporary_Absence_End_Date_Desc_Key" of-type="DateAndTime.DateAndTime" usage="bound" />
     </data-set>
     <property name="facilityTotal" display-name-key="Facility_Total_Display_Key" description-key="Facility_Total_Desc_Key" of-type="Whole.None" usage="input" required="false" />
     <property name="assignedTotal" display-name-key="Assigned_Total_Display_Key" description-key="Assigned_Total_Desc_Key" of-type="Whole.None" usage="input" required="false" />
