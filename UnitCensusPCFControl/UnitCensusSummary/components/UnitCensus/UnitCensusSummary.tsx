@@ -228,17 +228,28 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
     updated?: IPersonaProps[],
   ): Promise<void> => {
     const existingIds = new Set(existing.map((person) => person.key));
+    const updatedIds = new Set((updated ?? []).map((person) => person.key));
     const additions = (updated ?? []).filter(
       (person) => !existingIds.has(person.key),
     );
-    if (!additions.length) return; // Removing a chip deliberately does not deactivate or delete its record.
+    const removals = existing.filter((person) => !updatedIds.has(person.key));
+    if (!additions.length && !removals.length) return;
     try {
       setIsSaving(true);
       const service = new WebApiService(context);
       await Promise.all(
-        additions.map((person) =>
-          service.updatePurpose(String(person.key), purpose?.value ?? null),
-        ),
+        [
+          // Additions move residents into the selected purpose (or Active when
+          // purpose is undefined).
+          ...additions.map((person) =>
+            service.updatePurpose(String(person.key), purpose?.value ?? null),
+          ),
+          // Clicking X in an Inactive row clears Purpose. It moves the
+          // resident to Active; it never deactivates or deletes the record.
+          ...(purpose
+            ? removals.map((person) => service.updatePurpose(String(person.key), null))
+            : []),
+        ],
       );
       dataset.refresh();
     } catch (saveError) {
