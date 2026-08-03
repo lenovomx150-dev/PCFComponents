@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Stack, Text, TextField, Icon, Spinner, SpinnerSize } from "@fluentui/react";
 import { IPersonaProps } from "@fluentui/react/lib/Persona";
-import { NormalPeoplePicker } from "@fluentui/react/lib/Pickers";
+import { NormalPeoplePicker, PeoplePickerItem, ValidationState } from "@fluentui/react/lib/Pickers";
 
 import { ICensusStatusRow, IResidentCensusRow } from "./types";
 import { styles, customPickerStyles } from "./styles";
@@ -197,6 +197,19 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
                                 onEmptyResolveSuggestions={selectedItems => resolveSuggestions("", selectedItems)}
                                 getTextFromItem={persona => persona.text ?? ""}
                                 selectedItems={item.residents}
+                                onRenderItem={pickerItemProps => {
+                                    const persona = pickerItemProps.item as ICensusPersona;
+                                    const peoplePickerItemProps = {
+                                        ...pickerItemProps,
+                                        item: { ...pickerItemProps.item, ValidationState: ValidationState.valid }
+                                    };
+                                    return <div onClick={event => {
+                                        // Keep the built-in X behavior. Clicking the standard
+                                        // Persona chip itself opens the related Juvenile record.
+                                        if ((event.target as Element).closest("button")) return;
+                                        if (persona.data) openJuvenile(persona.data);
+                                    }}><PeoplePickerItem {...peoplePickerItemProps} /></div>;
+                                }}
                                 onChange={people => handlePickerChange(purpose, item.residents, people)}
                                 styles={customPickerStyles}
                                 inputProps={{ "aria-label": `Search and assign residents to ${item.status}` }}

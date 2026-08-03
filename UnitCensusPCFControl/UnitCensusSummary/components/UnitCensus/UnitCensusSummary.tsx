@@ -1,9 +1,6 @@
 import * as React from "react";
 import {
   Icon,
-  IconButton,
-  Persona,
-  PersonaSize,
   Spinner,
   SpinnerSize,
   Stack,
@@ -11,7 +8,7 @@ import {
   TextField,
 } from "@fluentui/react";
 import { IPersonaProps } from "@fluentui/react/lib/Persona";
-import { NormalPeoplePicker } from "@fluentui/react/lib/Pickers";
+import { NormalPeoplePicker, PeoplePickerItem, ValidationState } from "@fluentui/react/lib/Pickers";
 
 import {
   IPurposeDefinition,
@@ -301,32 +298,16 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
         selectedItems={selectedItems}
         onRenderItem={(itemProps) => {
           const resident = itemProps.item as IResidentPersona;
+          const peoplePickerItemProps = {
+            ...itemProps,
+            item: { ...itemProps.item, ValidationState: ValidationState.valid },
+          };
           return (
-            <div
-              role="listitem"
-              style={{ display: "flex", alignItems: "center", margin: "2px 4px 2px 0" }}
-            >
-              <button
-                type="button"
-                onClick={() => resident.data && openResident(resident.data)}
-                title={`Open ${resident.text}`}
-                style={{ border: "none", background: "#f3f2f1", borderRadius: 2, cursor: "pointer", padding: "2px 6px" }}
-              >
-                <Persona
-                  text={resident.text}
-                  imageUrl={resident.imageUrl}
-                  size={PersonaSize.size24}
-                  styles={{ root: { minWidth: 0 } }}
-                />
-              </button>
-              {!readOnly && (
-                <IconButton
-                  iconProps={{ iconName: "Cancel" }}
-                  onClick={itemProps.onRemoveItem}
-                  ariaLabel={`Remove ${resident.text}`}
-                  styles={{ root: { height: 24, width: 24 } }}
-                />
-              )}
+            <div onClick={(event) => {
+              if ((event.target as Element).closest("button")) return;
+              if (resident.data) openResident(resident.data);
+            }}>
+              <PeoplePickerItem {...peoplePickerItemProps} />
             </div>
           );
         }}
