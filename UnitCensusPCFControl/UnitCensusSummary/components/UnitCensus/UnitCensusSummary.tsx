@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Icon,
-  IconButton,
   Spinner,
   SpinnerSize,
   Stack,
@@ -283,32 +282,6 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
       <NormalPeoplePicker
         getTextFromItem={(item) => item.text ?? ""}
         selectedItems={selectedItems}
-        onRenderItem={(itemProps) => {
-          const resident = itemProps.item as IResidentPersona;
-          return (
-            <div
-              role="listitem"
-              style={{ display: "flex", alignItems: "center", margin: "2px 4px 2px 0" }}
-            >
-              <button
-                type="button"
-                onClick={() => resident.data && openResident(resident.data)}
-                style={{ border: "none", background: "#f3f2f1", borderRadius: 2, cursor: "pointer", padding: "4px 6px" }}
-                title={`Open ${resident.text}`}
-              >
-                {resident.text}
-              </button>
-              {!readOnly && (
-                <IconButton
-                  iconProps={{ iconName: "Cancel" }}
-                  onClick={itemProps.onRemoveItem}
-                  ariaLabel={`Remove ${resident.text}`}
-                  styles={{ root: { height: 24, width: 24 } }}
-                />
-              )}
-            </div>
-          );
-        }}
         onResolveSuggestions={readOnly ? () => [] : resolveSuggestions}
         onEmptyResolveSuggestions={
           readOnly ? undefined : (selected) => resolveSuggestions("", selected)
