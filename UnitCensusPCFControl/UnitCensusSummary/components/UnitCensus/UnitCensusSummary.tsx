@@ -67,11 +67,20 @@ const lookupId = (
   columnName: string,
   fallbackColumnName?: string,
 ): string | undefined => {
-  const value = record.getValue(columnName) ?? (fallbackColumnName ? record.getValue(fallbackColumnName) : undefined);
+  const directRecord = record as unknown as Record<string, unknown>;
+  const value = record.getValue(columnName)
+    ?? (fallbackColumnName ? record.getValue(fallbackColumnName) : undefined)
+    ?? directRecord[columnName]
+    ?? (fallbackColumnName ? directRecord[fallbackColumnName] : undefined);
   const reference = Array.isArray(value) ? value[0] : value;
-  return reference && typeof reference === "object" && "id" in reference && typeof reference.id === "string"
-    ? reference.id.replace(/[{}]/g, "")
-    : undefined;
+  if (!reference || typeof reference !== "object" || !("id" in reference)) return undefined;
+
+  const id = reference.id;
+  if (typeof id === "string") return id.replace(/[{}]/g, "");
+  if (id && typeof id === "object" && "guid" in id && typeof id.guid === "string") {
+    return id.guid.replace(/[{}]/g, "");
+  }
+  return undefined;
 };
 
 const toResident = (

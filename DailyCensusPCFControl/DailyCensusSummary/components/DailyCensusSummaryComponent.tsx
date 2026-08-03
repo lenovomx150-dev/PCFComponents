@@ -37,11 +37,19 @@ const formatValue = (record: ComponentFramework.PropertyHelper.DataSetApi.Entity
     record.getFormattedValue(name) || (fallbackName ? record.getFormattedValue(fallbackName) : "") || "";
 
 const lookupId = (record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord, name: string, fallbackName?: string): string | undefined => {
-    const value = record.getValue(name) ?? (fallbackName ? record.getValue(fallbackName) : undefined);
+    const directRecord = record as unknown as Record<string, unknown>;
+    const value = record.getValue(name)
+        ?? (fallbackName ? record.getValue(fallbackName) : undefined)
+        ?? directRecord[name]
+        ?? (fallbackName ? directRecord[fallbackName] : undefined);
     const reference = Array.isArray(value) ? value[0] : value;
-    return reference && typeof reference === "object" && "id" in reference && typeof reference.id === "string"
-        ? reference.id.replace(/[{}]/g, "")
-        : undefined;
+    if (!reference || typeof reference !== "object" || !("id" in reference)) return undefined;
+    const id = reference.id;
+    if (typeof id === "string") return id.replace(/[{}]/g, "");
+    if (id && typeof id === "object" && "guid" in id && typeof id.guid === "string") {
+        return id.guid.replace(/[{}]/g, "");
+    }
+    return undefined;
 };
 
 const datasetResidents = (dataset: ComponentFramework.PropertyTypes.DataSet): IResidentCensusRow[] =>
