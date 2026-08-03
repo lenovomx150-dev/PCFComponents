@@ -65,8 +65,9 @@ const isOneDayAfterReturn = (
 const lookupId = (
   record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
   columnName: string,
+  fallbackColumnName?: string,
 ): string | undefined => {
-  const value = record.getValue(columnName);
+  const value = record.getValue(columnName) ?? (fallbackColumnName ? record.getValue(fallbackColumnName) : undefined);
   const reference = Array.isArray(value) ? value[0] : value;
   return reference && typeof reference === "object" && "id" in reference && typeof reference.id === "string"
     ? reference.id.replace(/[{}]/g, "")
@@ -77,8 +78,8 @@ const toResident = (
   record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
 ): IUnitCensusResident => ({
   id: record.getRecordId(),
-  juvenileId: lookupId(record, "juvenile"),
-  juvenile: record.getFormattedValue("juvenile") || "Resident",
+  juvenileId: lookupId(record, "juvenile", "ucm_juvenile"),
+  juvenile: record.getFormattedValue("juvenile") || record.getFormattedValue("ucm_juvenile") || "Resident",
   purpose: record.getFormattedValue("purpose"),
   temporaryAbsenceEndDate: getDateValue(
     record.getValue("temporaryabsenceenddate"),
