@@ -1,6 +1,9 @@
 import * as React from "react";
 import {
   Icon,
+  IconButton,
+  Persona,
+  PersonaSize,
   Spinner,
   SpinnerSize,
   Stack,
@@ -62,13 +65,22 @@ const isOneDayAfterReturn = (
       ) === dateOnly(censusDate.toISOString())
     : false;
 
+const lookupId = (
+  record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
+  columnName: string,
+): string | undefined => {
+  const value = record.getValue(columnName);
+  const reference = Array.isArray(value) ? value[0] : value;
+  return reference && typeof reference === "object" && "id" in reference && typeof reference.id === "string"
+    ? reference.id.replace(/[{}]/g, "")
+    : undefined;
+};
+
 const toResident = (
   record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
 ): IUnitCensusResident => ({
   id: record.getRecordId(),
-  juvenileId: (
-    record.getValue("juvenile") as ComponentFramework.LookupValue | undefined
-  )?.id,
+  juvenileId: lookupId(record, "juvenile"),
   juvenile: record.getFormattedValue("juvenile") || "Resident",
   purpose: record.getFormattedValue("purpose"),
   temporaryAbsenceEndDate: getDateValue(
@@ -91,6 +103,11 @@ const toPersona = (
   ]
     .filter(Boolean)
     .join(" | "),
+  // Fluent Persona displays this Dataverse primary image when available and
+  // falls back to initials/the default icon when it is not.
+  imageUrl: resident.juvenileId
+    ? `/Image/download.aspx?Entity=ucm_offender&Attribute=entityimage&Id=${resident.juvenileId}&Full=true`
+    : undefined,
   data: resident,
   onClick,
 });
@@ -282,6 +299,37 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
       <NormalPeoplePicker
         getTextFromItem={(item) => item.text ?? ""}
         selectedItems={selectedItems}
+        onRenderItem={(itemProps) => {
+          const resident = itemProps.item as IResidentPersona;
+          return (
+            <div
+              role="listitem"
+              style={{ display: "flex", alignItems: "center", margin: "2px 4px 2px 0" }}
+            >
+              <button
+                type="button"
+                onClick={() => resident.data && openResident(resident.data)}
+                title={`Open ${resident.text}`}
+                style={{ border: "none", background: "#f3f2f1", borderRadius: 2, cursor: "pointer", padding: "2px 6px" }}
+              >
+                <Persona
+                  text={resident.text}
+                  imageUrl={resident.imageUrl}
+                  size={PersonaSize.size24}
+                  styles={{ root: { minWidth: 0 } }}
+                />
+              </button>
+              {!readOnly && (
+                <IconButton
+                  iconProps={{ iconName: "Cancel" }}
+                  onClick={itemProps.onRemoveItem}
+                  ariaLabel={`Remove ${resident.text}`}
+                  styles={{ root: { height: 24, width: 24 } }}
+                />
+              )}
+            </div>
+          );
+        }}
         onResolveSuggestions={readOnly ? () => [] : resolveSuggestions}
         onEmptyResolveSuggestions={
           readOnly ? undefined : (selected) => resolveSuggestions("", selected)
