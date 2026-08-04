@@ -22,6 +22,7 @@
       <property-set name="juvenile" display-name-key="Juvenile_Display_Key" description-key="Juvenile_Desc_Key" of-type="Lookup.Simple" usage="bound" />
       <property-set name="unitcensus" display-name-key="Unit_Census_Display_Key" description-key="Unit_Census_Desc_Key" of-type="Lookup.Simple" usage="bound" />
       <property-set name="purpose" display-name-key="Purpose_Display_Key" description-key="Purpose_Desc_Key" of-type="OptionSet" usage="bound" />
+      <property-set name="temporaryabsencestartdate" display-name-key="Temporary_Absence_Start_Date_Display_Key" description-key="Temporary_Absence_Start_Date_Desc_Key" of-type="DateAndTime.DateAndTime" usage="bound" />
       <property-set name="temporaryabsenceenddate" display-name-key="Temporary_Absence_End_Date_Display_Key" description-key="Temporary_Absence_End_Date_Desc_Key" of-type="DateAndTime.DateAndTime" usage="bound" />
       <property-set name="date" display-name-key="Census_Date_Display_Key" description-key="Census_Date_Desc_Key" of-type="DateAndTime.DateOnly" usage="bound" />
     </data-set>
