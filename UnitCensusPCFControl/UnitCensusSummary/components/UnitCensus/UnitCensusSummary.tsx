@@ -78,19 +78,40 @@ const isDroppedResident = (
 ): boolean => {
   const startDate = resident.temporaryAbsenceStartDate;
   const endDate = resident.temporaryAbsenceEndDate;
-  const hasReachedLongAbsenceDate = startDate
-    ? dateOnly(addDays(new Date(`${dateOnly(startDate)}T00:00:00`), 6).toISOString()) ===
-      dateOnly(censusDate.toISOString())
-    : false;
+  if (startDate) {
+    const longAbsenceDate = addDays(
+      new Date(`${dateOnly(startDate)}T00:00:00`),
+      6,
+    );
+    const returnIsOnOrAfterLongAbsenceDate =
+      !endDate ||
+      new Date(`${dateOnly(endDate)}T00:00:00`) >= longAbsenceDate;
 
-  if (!endDate) return hasReachedLongAbsenceDate;
-
-  // A resident who has already reached the long-absence drop date is not
-  // shown again after a later return (for example, July 27 start / August 5 return).
-  if (startDate && new Date(`${dateOnly(endDate)}T00:00:00`) >= addDays(new Date(`${dateOnly(startDate)}T00:00:00`), 6)) {
-    return false;
+    // The seventh calendar day is the only long-absence Dropped day. A later
+    // return date must not prevent this row from being displayed on that day.
+    if (returnIsOnOrAfterLongAbsenceDate) {
+      return dateOnly(longAbsenceDate.toISOString()) === dateOnly(censusDate.toISOString());
+    }
   }
+
+  // Absences that end within five days use the ordinary one-day-after-return rule.
   return isOneDayAfterReturn(endDate, censusDate);
+};
+
+const isPastLongAbsenceDropDate = (
+  resident: IUnitCensusResident,
+  censusDate: Date,
+): boolean => {
+  const startDate = resident.temporaryAbsenceStartDate;
+  if (!startDate) return false;
+  const longAbsenceDate = addDays(new Date(`${dateOnly(startDate)}T00:00:00`), 6);
+  const endDate = resident.temporaryAbsenceEndDate;
+  const returnIsOnOrAfterLongAbsenceDate =
+    !endDate || new Date(`${dateOnly(endDate)}T00:00:00`) >= longAbsenceDate;
+  return (
+    returnIsOnOrAfterLongAbsenceDate &&
+    dateOnly(censusDate.toISOString()) > dateOnly(longAbsenceDate.toISOString())
+  );
 };
 
 const lookupId = (
@@ -244,6 +265,7 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
                 resident.temporaryAbsenceStartDate,
                 comparisonDate,
               ) &&
+              !isPastLongAbsenceDropDate(resident, comparisonDate) &&
               !isDroppedResident(resident, comparisonDate),
           )
           .map((resident) => toPersona(resident)),
