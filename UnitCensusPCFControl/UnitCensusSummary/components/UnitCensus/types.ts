@@ -5,6 +5,7 @@ export interface IUnitCensusResident {
     juvenileId?: string;
     juvenile: string;
     purpose: string;
+    temporaryAbsenceStartDate?: string;
     temporaryAbsenceEndDate?: string;
 }
 

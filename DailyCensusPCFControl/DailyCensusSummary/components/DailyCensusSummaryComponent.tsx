@@ -71,7 +71,7 @@ const datasetResidents = (dataset: ComponentFramework.PropertyTypes.DataSet): IR
         };
     });
 
-const toPersona = (resident: IResidentCensusRow, onClick?: React.MouseEventHandler<HTMLElement>): ICensusPersona => ({
+const toPersona = (resident: IResidentCensusRow): ICensusPersona => ({
     key: resident.id,
     text: resident.juvenile || resident.facilityRecord || "Resident",
     secondaryText: [resident.unitCensus, resident.facility].filter(Boolean).join(" - "),
@@ -81,8 +81,7 @@ const toPersona = (resident: IResidentCensusRow, onClick?: React.MouseEventHandl
         resident.temporaryAbsenceStartDate ? `Absent from: ${resident.temporaryAbsenceStartDate}` : "",
         resident.temporaryAbsenceEndDate ? `Absent until: ${resident.temporaryAbsenceEndDate}` : ""
     ].filter(Boolean).join(" | "),
-    data: resident,
-    onClick
+    data: resident
 });
 
 export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = ({ dataset, context }) => {
@@ -140,7 +139,7 @@ export const DailyCensusSummaryComponent: React.FC<IDailyCensusSummaryProps> = (
         ...definition,
         residents: residents
             .filter(resident => normalisePurpose(resident.purpose, purposeDefinitions) === definition.status)
-            .map(resident => toPersona(resident, () => openJuvenile(resident)))
+            .map(resident => toPersona(resident))
     })), [openJuvenile, purposeDefinitions, residents]);
 
     const resolveSuggestions = React.useCallback((filterText: string, selectedItems?: IPersonaProps[]): ICensusPersona[] => {

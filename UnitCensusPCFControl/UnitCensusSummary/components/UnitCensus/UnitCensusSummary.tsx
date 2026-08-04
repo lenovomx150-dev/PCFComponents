@@ -62,6 +62,37 @@ const isOneDayAfterReturn = (
       ) === dateOnly(censusDate.toISOString())
     : false;
 
+const isTemporaryAbsenceStartDate = (
+  startDate: string | undefined,
+  censusDate: Date,
+): boolean =>
+  !!startDate && dateOnly(startDate) === dateOnly(censusDate.toISOString());
+
+// An open temporary absence is dropped on the seventh calendar day (start + 6)
+// only.  Once it has crossed that point it must not appear again when a return
+// date is subsequently entered.  Shorter absences still use the normal
+// "one day after return" dropped rule.
+const isDroppedResident = (
+  resident: IUnitCensusResident,
+  censusDate: Date,
+): boolean => {
+  const startDate = resident.temporaryAbsenceStartDate;
+  const endDate = resident.temporaryAbsenceEndDate;
+  const hasReachedLongAbsenceDate = startDate
+    ? dateOnly(addDays(new Date(`${dateOnly(startDate)}T00:00:00`), 6).toISOString()) ===
+      dateOnly(censusDate.toISOString())
+    : false;
+
+  if (!endDate) return hasReachedLongAbsenceDate;
+
+  // A resident who has already reached the long-absence drop date is not
+  // shown again after a later return (for example, July 27 start / August 5 return).
+  if (startDate && new Date(`${dateOnly(endDate)}T00:00:00`) >= addDays(new Date(`${dateOnly(startDate)}T00:00:00`), 6)) {
+    return false;
+  }
+  return isOneDayAfterReturn(endDate, censusDate);
+};
+
 const lookupId = (
   record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
   columnName: string,
@@ -90,6 +121,9 @@ const toResident = (
   juvenileId: lookupId(record, "juvenile", "ucm_juvenile"),
   juvenile: record.getFormattedValue("juvenile") || record.getFormattedValue("ucm_juvenile") || "Resident",
   purpose: record.getFormattedValue("purpose"),
+  temporaryAbsenceStartDate: getDateValue(
+    record.getValue("temporaryabsencestartdate"),
+  ),
   temporaryAbsenceEndDate: getDateValue(
     record.getValue("temporaryabsenceenddate"),
   ),
@@ -97,7 +131,6 @@ const toResident = (
 
 const toPersona = (
   resident: IUnitCensusResident,
-  onClick: () => void,
 ): IResidentPersona => ({
   key: resident.id,
   text: resident.juvenile,
@@ -116,7 +149,6 @@ const toPersona = (
     ? `/Image/download.aspx?Entity=ucm_offender&Attribute=entityimage&Id=${resident.juvenileId}&Full=true`
     : undefined,
   data: resident,
-  onClick,
 });
 
 export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
@@ -177,17 +209,24 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
 
   const allPersonas = React.useMemo(
     () =>
-      residents.map((resident) =>
-        toPersona(resident, () => openResident(resident)),
-      ),
+      residents.map((resident) => toPersona(resident)),
     [openResident, residents],
   );
   const activeResidents = React.useMemo(
     () =>
       residents
-        .filter((resident) => !resident.purpose)
-        .map((resident) => toPersona(resident, () => openResident(resident))),
-    [openResident, residents],
+        // A youth remains active on the calendar day an absence starts. They
+        // move to Inactive on the following day, even when Purpose is already set.
+        .filter(
+          (resident) =>
+            !resident.purpose ||
+            isTemporaryAbsenceStartDate(
+              resident.temporaryAbsenceStartDate,
+              comparisonDate,
+            ),
+        )
+        .map((resident) => toPersona(resident)),
+    [comparisonDate, openResident, residents],
   );
   // Render every configured purpose so a resident can be moved into an empty
   // purpose row as well as between rows that already contain residents.
@@ -201,12 +240,13 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
           .filter(
             (resident) =>
               resident.purpose === purpose.label &&
-              !isOneDayAfterReturn(
-                resident.temporaryAbsenceEndDate,
+              !isTemporaryAbsenceStartDate(
+                resident.temporaryAbsenceStartDate,
                 comparisonDate,
-              ),
+              ) &&
+              !isDroppedResident(resident, comparisonDate),
           )
-          .map((resident) => toPersona(resident, () => openResident(resident))),
+          .map((resident) => toPersona(resident)),
       })),
     [comparisonDate, inactivePurposes, openResident, residents],
   );
@@ -216,7 +256,7 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
       .filter(
         (resident) =>
           resident.purpose &&
-          isOneDayAfterReturn(resident.temporaryAbsenceEndDate, comparisonDate),
+          isDroppedResident(resident, comparisonDate),
       )
       .forEach((resident) =>
         grouped.set(resident.purpose, [
@@ -227,9 +267,7 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
     return Array.from(grouped.entries()).map(([purpose, people]) => ({
       status: purpose,
       popLabel: `${purpose} (after 5 days)`,
-      residents: people.map((person) =>
-        toPersona(person, () => openResident(person)),
-      ),
+      residents: people.map((person) => toPersona(person)),
     }));
   }, [comparisonDate, openResident, residents]);
 
