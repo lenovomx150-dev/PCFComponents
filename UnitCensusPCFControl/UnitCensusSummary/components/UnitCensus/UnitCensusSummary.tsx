@@ -272,26 +272,25 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
       })),
     [comparisonDate, inactivePurposes, openResident, residents],
   );
-  const droppedRows = React.useMemo(() => {
-    const grouped = new Map<string, IUnitCensusResident[]>();
-    residents
-      .filter(
-        (resident) =>
-          resident.purpose &&
-          isDroppedResident(resident, comparisonDate),
-      )
-      .forEach((resident) =>
-        grouped.set(resident.purpose, [
-          ...(grouped.get(resident.purpose) ?? []),
-          resident,
-        ]),
-      );
-    return Array.from(grouped.entries()).map(([purpose, people]) => ({
-      status: purpose,
-      popLabel: `${purpose} (after 5 days)`,
-      residents: people.map((person) => toPersona(person)),
-    }));
-  }, [comparisonDate, openResident, residents]);
+  const droppedRows = React.useMemo(
+    () =>
+      purposes.map((purpose) => ({
+        status: purpose.label,
+        popLabel: `${purpose.label} (after 5 days)`,
+        residents: residents
+          .filter(
+            (resident) =>
+              resident.purpose === purpose.label &&
+              isDroppedResident(resident, comparisonDate),
+          )
+          .map((resident) => toPersona(resident)),
+      })),
+    [comparisonDate, openResident, purposes, residents],
+  );
+  const droppedTotal = droppedRows.reduce(
+    (total, row) => total + row.residents.length,
+    0,
+  );
 
   const resolveSuggestions = React.useCallback(
     (filterText: string, selected?: IPersonaProps[]): IResidentPersona[] => {
@@ -481,9 +480,8 @@ export const UnitCensusSummaryComponent: React.FC<IUnitCensusSummaryProps> = ({
         <Text className={styles.sectionHeader}>
           4. Dropped Residents (List for 1 day then drop)
         </Text>
-        {droppedRows.length > 0 ? (
-          renderRows(droppedRows, false)
-        ) : (
+        {renderRows(droppedRows, false)}
+        {droppedTotal === 0 && (
           <div className={styles.section3FooterRow}>
             <div className={styles.footerItem}>
               <Text className={styles.footerLabel}>Total Dropped</Text>
